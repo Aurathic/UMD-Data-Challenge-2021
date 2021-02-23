@@ -1,0 +1,134 @@
+---
+title: | 
+  | Data Challenge Spring 2021
+  | UMD
+  | Team 6
+author:
+- Walesia Robinson II
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+```{r echo=FALSE, include=FALSE}
+# importing libraries we'll use for this assignment
+# uncomment below to install for the first time
+#library(tidyverse) # includes dplyr
+```
+```{r}
+locate_file <- "C:/Users/X1.WLR2/Desktop/DataChallenge2021/Lv2_NCSG_BehaviorChangesCOVID19/Data_Lv2_NCSG_BehaviorChangesCOVID19.csv"
+behaviorchanges <- read.csv(locate_file)
+
+```
+```{r}
+behaviorchanges1 <- behaviorchanges %>%
+  mutate(Sex = case_when(Sex == 1 ~ 'Male', 
+                         Sex == 2 ~ 'Female', 
+                         Sex == -8 ~ 'Prefer not to say',
+                         Sex == -9 ~ 'Other/Non-binary'),
+         Married = case_when(Married == 1 ~ 'Single',
+                             Married == 2 ~ 'Married',
+                             Married == 3 ~ 'Divorced/Separated',
+                             Married == -8 ~ 'Prefer not to answer'),
+         Educ = case_when(Educ == 1 ~ 'Less than high school',
+                          Educ == 2 ~ 'High school graduate or GED',
+                          Educ == 3 ~ "Some college or associate's degree",
+                          Educ == 4 ~ "Graduate or professional degree", 
+                          Educ == -8 ~ "Prefer not to say"),
+         HType = case_when(HType == 1 ~ "SFH",
+                           HType == 2 ~ "MFH", 
+                           HType == 3 ~ "Condo/townhome",
+                           HType == 4 ~ "APT", 
+                           HType == -8 ~ "Prefer not to say"),
+         Worker = case_when(Worker == 1 ~ "Employed full-time", 
+                            Worker == 2 ~ "Employed part-time",
+                            Worker == 3 ~ "Unemployed",
+                            Worker == 4 ~ "Retired"),
+         Groc_Shp = case_when(Groc_Shp == 1 ~ "Online",
+                              Groc_Shp == 2 ~ "1x month",
+                              Groc_Shp == 3 ~ "2x month",
+                              Groc_Shp == 4 ~ "3x month",
+                              Groc_Shp == 5 ~ "+4x month"),
+         ONL_SHP = case_when(ONL_SHP == 1 ~ "Yes",
+                             ONL_SHP == 2 ~ "No",
+                             ONL_SHP == -8 ~ "N/A"),
+         ONL_SHP_AFTR = case_when(ONL_SHP_AFTR == 1 ~ "Yes",
+                                  ONL_SHP_AFTR == 2 ~ "No",
+                                  ONL_SHP_AFTR == 3 ~ "Maybe",
+                                  ONL_SHP_AFTR == -8 ~ "N/A")
+         )
+
+# Change specified char variables to factor
+behaviorchanges1 <- mutate_at(behaviorchanges1, vars(Sex, Married, Educ, HType, Worker, Groc_Shp, ONL_SHP, ONL_SHP_AFTR), as.factor)
+
+# now change variables (Age and Commute minutes) to integer values
+behaviorchanges1 <- mutate_at(behaviorchanges1, vars(Age, Commute_min), as.integer)
+
+glimpse(behaviorchanges1)
+```
+```{r}
+
+ggplot(mutate(behaviorchanges1, Sex = fct_infreq(Sex))) + 
+  geom_bar(aes(x=Sex), fill = "purple") +
+  ggtitle("Sex of survey respondents")
+
+ggplot(mutate(behaviorchanges1, Worker = fct_infreq(Worker))) +
+  geom_bar(aes(x=Worker), fill = "navy") +
+  ggtitle("Employment status of survey respondents")
+  
+```
+```{r}
+ggplot(data = behaviorchanges1, mapping = aes(x = Sex, fill = Worker)) +
+  geom_bar() +
+  ggtitle("Visualizing joint distribution of sex and employment status")
+
+
+ggplot(data = behaviorchanges1, mapping = aes(x = Groc_Shp, fill = Worker)) +
+  geom_bar() +
+  ggtitle("Visualizing joint distribution of frequency of grocery shopping and employment status")
+
+ggplot(data = behaviorchanges1, mapping = aes(x = HType, fill = Worker)) +
+  geom_bar() +
+  ggtitle("Visualizing joint distribution of household type and employment status")
+```
+
+
+```{r}
+# Given the survey respondent tried online grocery shopping during lockdown, what was their employment status?
+x <- filter(behaviorchanges1, ONL_SHP == "Yes")
+table(x$Worker)
+
+# Given the survey respondent did not try online grocery shopping during lockdown, what was their employment status?
+y <- filter(behaviorchanges1, ONL_SHP == "No")
+table(y$Worker)
+
+# Given the survey respondent did try online grocery shopping during lockdown and would try it again after, what was their employment status?
+z <- filter(behaviorchanges1, ONL_SHP == "Yes", ONL_SHP_AFTR == "Yes")
+table(z$Worker)
+
+
+#Summary table breaking down whether or not respondents tried online grocery shopping or not based on employment status.
+sTable <- table(behaviorchanges1$ONL_SHP, behaviorchanges1$Worker)
+round(100*prop.table(sTable,2), digits = 2)
+
+#Summary table breaking down respondent employment status based on household type.
+hTable <- table(behaviorchanges1$Worker, behaviorchanges1$HType)
+round(100*prop.table(hTable,2), digits = 2)
+
+#Summary table breaking down respondent online grocery shopping behaviors based on household type.
+oTable <- table(behaviorchanges1$ONL_SHP, behaviorchanges1$HType)
+round(100*prop.table(oTable,2), digits = 2)
+```
+```{r}
+
+```
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
