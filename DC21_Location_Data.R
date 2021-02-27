@@ -1,0 +1,39 @@
+library(foreign)
+library(readxl)
+library(tidyverse)
+
+# Smart Location Database
+sld <- read.dbf("SmartLocationDb.dbf")
+
+# Survey data
+sur <- read.csv("Data_Lv2_NCSG_BehaviorChangesCOVID19.csv")
+
+# Data used to convert CFIPS to ZIP code
+area_codes <- read_excel("ZIP_TRACT_122020.xlsx")
+
+# Make sure all zipcodes are 5 characters long
+sur$Zipcode = str_pad(sur$Zipcode, pad="0", side="left", width=5)
+
+# For every zipcode in survey dataset
+zip_code_data <- map(sur$Zipcode, function(zc) {
+  # Get all data in SLD associated with tracts in given zipcode 
+  x <- filter(sld,substr(GEOID10,1,11) %in% filter(area_codes, ZIP == zc)$TRACT)
+  # Return vector of the following (condensed) traits 
+  # Average "Total road network density"
+  c("road_density" = sum(x$AC_LAND * x$D3a) / sum(x$AC_LAND),
+  # "Proportion of CBG employment within ¼ mile of fixed-guideway transit stop"
+  # "transit_dist" = sum(x$D4b025 * x$Workers) / sum(x$Workers),
+  # "Aggregate frequency of transit service per square mile"
+  "transit_service" = sum((x$D4d * x$AC_LAND)[x$D4d >= 0]) / sum(x$AC_LAND[x$D4d >= 0]),
+  # Intersection density in terms of pedestrian-oriented intersections
+  # having three or more legs per square mile
+  "pedes_inter_density" = sum(((x$D3bpo3 + x$D3bpo4) * x$AC_LAND)[x$D3bpo3 >= 0]) / sum(x$AC_LAND[x$D3bpo3 >= 0]),
+  # Gross activity density on unprotected land
+  "activ_density" = sum(x$D1D * x$AC_UNPR) / sum(x$AC_UNPR)
+  )
+})
+# convert list of vectors into a dataframe
+zip_code_df <- bind_rows(lapply(zip_code_data, as.data.frame.list))
+# sur <- cbind(sur,zip_code_df)
+  
+write.csv(zip_code_df,"new_vars4.csv")

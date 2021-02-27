@@ -1,0 +1,471 @@
+---
+title: "DC21"
+author: "Junrong Liu"
+date: "2/23/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+
+covid_change <- read_csv('Data_Lv2_NCSG_BehaviorChangesCOVID19.csv')
+new_vars <- read_csv('new_vars4.csv')
+
+```
+
+
+```{r}
+#Data Cleaning
+covid_change <- covid_change %>%
+  mutate(Sex = as.factor(Sex),
+         Married = as.factor(Married),
+         Educ = as.factor(Educ),
+         HType = as.factor(HType),
+         Worker = as.factor(Worker),
+         Age = as.numeric(Age),
+         Age = ifelse(Age == 0, NA, Age),
+         Groc_Shp = as.factor(Groc_Shp), 
+         ONL_SHP = as.factor(ONL_SHP), 
+         ONL_SHP_AFTR = as.factor(ONL_SHP_AFTR), 
+         Transmode_before = as.factor(Transmode_before), 
+         commute_before = as.factor(commute_before), 
+         commute_after = as.factor(commute_after),
+         HHsize = ifelse(is.na(HHsize), median(HHsize, na.rm = TRUE), HHsize),
+         Kids = ifelse(is.na(Kids), median(Kids, na.rm = TRUE), Kids),
+         Auto_own = ifelse(is.na(Auto_own), median(Auto_own, na.rm = TRUE), Auto_own),
+         Age = ifelse(is.na(Age), median(Age, na.rm = TRUE), Age))
+
+summary(covid_change) #No NAs
+```
+```{r}
+covid_change <- covid_change %>%
+  mutate(Sex = case_when(Sex == 1 ~ 'Male', 
+                         Sex == 2 ~ 'Female', 
+                         Sex == -8 ~ 'Prefer not to say',
+                         Sex == -9 ~ 'Other/Non-binary'),
+         Married = case_when(Married == 1 ~ 'Single',
+                             Married == 2 ~ 'Married',
+                             Married == 3 ~ 'Divorced/Separated',
+                             Married == -8 ~ 'Prefer not to answer'),
+         Educ = case_when(Educ == 1 ~ 'Less than high school',
+                          Educ == 2 ~ 'High school graduate or GED',
+                          Educ == 3 ~ "Some college or associate's degree",
+                          Educ == 4 ~ "Graduate or professional degree", 
+                          Educ == -8 ~ "Prefer not to say"),
+         HType = case_when(HType == 1 ~ "Single family home",
+                           HType == 2 ~ "Multi-family home", 
+                           HType == 3 ~ "Condo/townhome",
+                           HType == 4 ~ "Apartment", 
+                           HType == 5 ~ "Other"),
+         Worker = case_when(Worker == 1 ~ "Employed full-time", 
+                            Worker == 2 ~ "Employed part-time",
+                            Worker == 3 ~ "Unemployed",
+                            Worker == 4 ~ "Retired"),
+         Groc_Shp = case_when(Groc_Shp == 1 ~ "None - online",
+                              Groc_Shp == 2 ~ "1x month",
+                              Groc_Shp == 3 ~ "2x month",
+                              Groc_Shp == 4 ~ "3x month",
+                              Groc_Shp == 5 ~ "+4x month"),
+         ONL_SHP = case_when(ONL_SHP == 1 ~ "Yes",
+                             ONL_SHP == 2 ~ "No",
+                             ONL_SHP == -8 ~ "N/A"),
+         ONL_SHP_AFTR = case_when(ONL_SHP_AFTR == 1 ~ "Yes",
+                                  ONL_SHP_AFTR == 2 ~ "No",
+                                  ONL_SHP_AFTR == 3 ~ "Maybe",
+                                  ONL_SHP_AFTR == -8 ~ "N/A"),
+         Transmode_before = case_when(Transmode_before == 1 ~ "Auto/Driving",
+                                      Transmode_before == 2 ~ "Auto/Passenger",
+                                      Transmode_before == 3 ~ "Public transit",
+                                      Transmode_before == 4 ~ "Walk",
+                                      Transmode_before == 5 ~ "Bike",
+                                      Transmode_before == 6 ~ "Ridesharing",
+                                      Transmode_before == 7 ~ "Other",
+                                      Transmode_before == -8 ~ "NA/Teleworked"),
+         Transmode_after = case_when(Transmode_after == 1 ~ "Auto/Driving",
+                                     Transmode_after == 2 ~ "Auto/Passenger",
+                                     Transmode_after == 3 ~ "Public transit",
+                                     Transmode_after == 4 ~ "Walk",
+                                     Transmode_after == 5 ~ "Bike",
+                                     Transmode_after == 6 ~ "Ridesharing",
+                                     Transmode_after == 7 ~ "Other",
+                                     Transmode_after == -8 ~ "NA/Teleworked"),
+         commute_before = case_when(commute_before == 1 ~ "Commuted every day",
+                                    commute_before == 2 ~ "Teleworked every day",
+                                    commute_before == 3 ~ "Partial commute/Telework",
+                                    commute_before == -8 ~ "Unemployed/NA"),
+         commute_after = case_when(commute_after == 1 ~ "No change - still commute",
+                                   commute_after == 2 ~ "No change - still telework",
+                                   commute_after == 3 ~ "Changed from partial commute to work/telework",
+                                   commute_after == 4 ~ "Changed to telework without change in workload",
+                                   commute_after == 5 ~ "Switched to telework with reduced workload",
+                                   commute_after == 6 ~ "Switched to telework with increased workload",
+                                   commute_after == 7 ~ "Stayed at home and unable to work",
+                                   commute_after == -8 ~ "Unemployed/NA"))
+```
+
+```{r}
+#Introducing new variables road density and transit service
+#Data Cleaning in new_vars
+new_vars <- new_vars %>% 
+  mutate(road_density = ifelse(is.na(road_density), median(road_density, na.rm = TRUE), road_density),
+         transit_service = ifelse(is.na(transit_service), median(transit_service, na.rm = TRUE), transit_service),
+         pedes_inter_density = ifelse(is.na(pedes_inter_density), median(pedes_inter_density, na.rm = TRUE), pedes_inter_density),
+         activ_density = ifelse(is.na(activ_density), median(activ_density, na.rm = TRUE), activ_density)
+         )
+
+#Append the new variables to the covid_change dataset
+covid_change$road_density <- new_vars$road_density
+covid_change$transit_service <- new_vars$transit_service
+covid_change$pedes_inter_density <- new_vars$pedes_inter_density
+covid_change$activ_density <- new_vars$activ_density
+```
+
+After cleaning the data, we build three logistic models, regressing variables like 
+Sex, Age, HHsize, Kids, Auto_own, Married, Educ, HType, Worker on commute_change_or_not, transmode_change_or_not and exercise_change_or_not respectively, to see which variables significantly influence those behavioral changes.
+
+```{r}
+#Change_or_not variables
+##Commute to work change or not?
+#Nothing
+covid_change <- covid_change %>%
+  mutate(commute_change_or_not = ifelse(commute_before != commute_after, 1, 0))
+
+model_formula_1 <- commute_change_or_not ~ Sex + Age + HHsize + Kids + Auto_own + Married + Educ + HType + Worker + road_density + transit_service + pedes_inter_density + activ_density
+
+commute_change_log <- glm(model_formula_1, family = 'binomial', data = covid_change)
+summary(commute_change_log)
+```
+```{r}
+#Backward selection for the commute to work model
+backwards_commute = step(commute_change_log, trace=0)
+summary(backwards_commute)
+```
+
+
+```{r}
+##Transmode change or not?
+covid_change <- covid_change %>%
+  mutate(transmode_change_or_not = ifelse(Transmode_before != Transmode_after, 1, 0))
+model_formula_2 <- transmode_change_or_not ~ Sex + Age + HHsize + Kids + Auto_own + Married + Educ + HType + Worker+ road_density + transit_service + pedes_inter_density + activ_density
+
+transmode_change_log <- glm(model_formula_2, family = 'binomial', data = covid_change)
+summary(transmode_change_log)
+```
+
+```{r}
+#Backward selection for the transmode model
+backwards_transmode = step(transmode_change_log, trace=0)
+summary(backwards_transmode)
+```
+
+
+
+```{r}
+##Exercise change or not?
+covid_change$Exe_After <- case_when(
+  covid_change$Exe_After == 1 ~ 1,
+  covid_change$Exe_After == 4|covid_change$Exe_After == 6 ~ 2,
+  covid_change$Exe_After == 5|covid_change$Exe_After == 7 ~ 3,
+  covid_change$Exe_After == 2|covid_change$Exe_After == 3 ~ 4
+)
+covid_change <- covid_change %>%
+  mutate(Exercise_change_or_not = ifelse(Exe_Before != Exe_After, 1, 0))
+
+model_formula_3 <- Exercise_change_or_not ~ Sex + Age + HHsize + Kids + Auto_own + Married + Educ + HType + Worker + road_density + transit_service + pedes_inter_density + activ_density
+
+exercise_change_log <- glm(model_formula_3, family = 'binomial', data = covid_change)
+summary(exercise_change_log)
+```
+```{r}
+#Backward selection for the exercise model
+backwards_exercise = step(exercise_change_log, trace=0)
+summary(backwards_exercise)
+```
+
+
+```{r}
+#What kind of people would still choose online shopping after the lockdown ends?
+#End up not finding any significant features correlating to whether one will still choose online shopping after lockdown ends.
+covid_change <- covid_change %>%
+  mutate(choose_online_shopping = ifelse(ONL_SHP == ONL_SHP_AFTR, 1, 0))
+
+model_formula_4 <- choose_online_shopping ~ Sex + Age + HHsize + Kids + Auto_own + Married + Educ + HType + Worker + road_density + transit_service + pedes_inter_density + activ_density
+
+online_shopping_log <- glm(model_formula_4, family = 'binomial', data = covid_change)
+summary(online_shopping_log)
+```
+```{r}
+#Backward selection for the online shopping model
+backwards_online_shopping = step(online_shopping_log, trace=0)
+summary(backwards_online_shopping)
+```
+
+
+```{r}
+# How much do they go out for non-essential purposes?
+covid_change <- covid_change %>%
+  mutate(Outside_Ac_or_not = ifelse(Outside_Ac > 1, 1, 0))
+
+model_formula_6 <- Outside_Ac_or_not ~ Sex + Age + HHsize + Kids + Auto_own + Married + Educ + HType + Worker + road_density + transit_service + pedes_inter_density + activ_density
+
+outside_ac_log <- glm(model_formula_6, family = 'binomial', data = covid_change)
+summary(outside_ac_log)
+```
+```{r}
+#Backward selection for the outside activity model
+backwards_outside_activity = step(outside_ac_log, trace=0)
+summary(backwards_outside_activity)
+```
+
+```{r}
+#What direction of changes did most people choose to make?
+Commute_changes <- covid_change %>%
+  group_by(commute_before, commute_after) %>%
+  summarise(count_of_respondents = length(PersonID))
+
+transmode_changes <- covid_change %>%
+  group_by(Transmode_before, Transmode_after) %>%
+  summarise(count_of_respondents = length(PersonID))
+
+exercise_changes <- covid_change %>%
+  group_by(Exe_Before, Exe_After) %>%
+  summarise(count_of_respondents = length(PersonID))
+
+```
+
+
+```{r}
+# Some basic percentage visualizations of respondents 
+
+ggplot(data = covid_change) +
+  geom_bar(mapping = aes(x=Sex, y = ..prop.., group =1), fill="darkgreen", stat= "count") +
+  scale_y_continuous(labels = scales::percent_format())
+
+ggplot(data = covid_change) +
+  geom_bar(mapping = aes(x=Worker, y = ..prop.., group =1), fill="blue", stat= "count") +
+  scale_y_continuous(labels = scales::percent_format())
+
+ggplot(data = covid_change) +
+  geom_bar(mapping = aes(x=HType, y = ..prop.., group =1), fill="coral", stat= "count") +
+  scale_y_continuous(labels = scales::percent_format())
+
+```
+
+
+```{r}
+# Plot of transportation mode(s) before and after the lockdown, broken down by household type
+
+# Transportation before lockdown
+ggplot(covid_change, aes(x= Transmode_before,  group=HType)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..))) +
+    geom_text(aes(label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5, angle = 0) +
+    labs(y = "Relative Frequency", x ="Transportation mode before lockdown") +
+    facet_wrap(~HType, ncol = 2, nrow = 3) +
+    scale_fill_discrete(name = "Transportation Mode - Before", labels = c("Auto - driving", "Auto - passenger", "Bike", "NA/Telework", "Other", "Public transit", "Ridesharing", "Walk")) + 
+    theme(axis.title.x = element_blank(),
+          axis.text.x = element_blank()) + 
+    expand_limits(y = 1) + 
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1L))
+
+# Transmode after
+ggplot(covid_change, aes(x= Transmode_after,  group=HType)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..))) +
+    geom_text(aes(label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5, angle = 0) +
+    labs(y = "Relative Frequency", x ="Transportation mode after lockdown") +
+    facet_wrap(~HType, ncol = 2, nrow = 3) +
+    scale_fill_discrete(name = "Transportation Mode - After", labels = c("Auto - driving", "Auto - passenger", "Bike", "NA/Teleworked", "Other", "Rideshare", "Walk")) + 
+    theme(axis.title.x = element_blank(),
+          axis.text.x = element_blank()) + 
+    expand_limits(y = 1) + 
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1L))
+```
+
+
+
+```{r}
+# Plot of transportation mode(s) before and after the lockdown, broken down by Worker type.
+# Transportation before lockdown
+ggplot(covid_change, aes(x= Transmode_before,  group=Worker)) + 
+  geom_bar(aes(y = ..prop.., fill = factor(..x..))) +
+  geom_text(aes(label = scales::percent(..prop..),
+                y= ..prop.. ), stat= "count", vjust = -.5, angle = 0) +
+  labs(y = "Relative Frequency", x ="Transportation mode before lockdown") +
+  facet_wrap(~Worker, ncol = 2, nrow = 3) +
+  scale_fill_discrete(name = "Transportation Mode - Before", labels = c("Auto - driving", "Auto - passenger", "Bike", "NA/Telework", "Other", "Public transit", "Ridesharing", "Walk")) + 
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank()) + 
+  expand_limits(y = 1) + 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1L))
+
+# Transmode after
+ggplot(covid_change, aes(x= Transmode_after,  group=Worker)) + 
+  geom_bar(aes(y = ..prop.., fill = factor(..x..))) +
+  geom_text(aes(label = scales::percent(..prop..),
+                y= ..prop.. ), stat= "count", vjust = -.5, angle = 0) +
+  labs(y = "Relative Frequency", x ="Transportation mode after lockdown") +
+  facet_wrap(~Worker, ncol = 2, nrow = 3) +
+  scale_fill_discrete(name = "Transportation Mode - After", labels = c("Auto - driving", "Auto - passenger", "Bike", "NA/Teleworked", "Other", "Rideshare", "Walk")) + 
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank()) + 
+  expand_limits(y = 1) + 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1L))
+```
+
+```{r}
+ #workaround to test the accuracy/set labels for plots (ggplot2 mapping incorrectly)
+
+ #ggplot(covid_change, aes(x=as.factor(Exe_Before), fill=as.factor(Exe_Before) )) + 
+  #geom_bar( ) +
+   #facet_wrap(~Worker, ncol = 2, nrow = 3) +
+   #scale_fill_brewer(palette = "Set1")
+```
+
+
+```{r}
+# Plots of commute before and after the lockdown, broken down by worker type.
+
+ggplot(covid_change, aes(x= commute_before,  group=Worker)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..))) +
+    geom_text(aes(label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5, angle = 0) +
+    labs(y = "Relative Frequency", x ="Commute mode before lockdown") +
+    scale_fill_discrete(name = "Commute Mode - Before", labels = c("Commute daily", "Partial commute/telework", "Telework daily", "Not employed/NA")) + 
+    facet_wrap(~Worker, ncol = 2, nrow = 3) + 
+    theme(axis.title.x = element_blank(),
+          axis.text.x = element_blank()) + 
+    expand_limits(y = 1) + 
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1L))
+
+# Commute after
+ggplot(covid_change, aes(x= commute_after,  group=Worker)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..))) +
+    geom_text(aes(label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5, angle = 0) +
+    labs(y = "Relative Frequency", x ="Commute mode after lockdown") +
+    scale_fill_discrete(name = "Commute Mode - After", labels = c("Switch to partial commute to work/telework", "Switch to telework without change in workload", "No change - still commute", "No change - still telework", "Stayed at home unable to work", "Switch to telework with increased workload", "Switch to telework with reduced workload", "Not employed/NA")) + 
+    facet_wrap(~Worker, ncol = 2, nrow = 3) + 
+    theme(axis.title.x = element_blank(),
+          axis.text.x = element_blank()) + 
+    expand_limits(y = 1) + 
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1L))
+
+```
+
+
+
+```{r}
+# Plots of exercise habit before and after the lockdown, broken down by household type.
+# Exercise habit before
+ggplot(covid_change, aes(x= Exe_Before,  group=HType)) + 
+  geom_bar(aes(y = ..prop.., fill = factor(..x..))) +
+  geom_text(aes(label = scales::percent(..prop..),
+                y= ..prop.. ), stat= "count", vjust = -.5, angle = 0) +
+  labs(y = "Relative Frequency", x ="Exercise habit before lockdown") +
+  scale_fill_discrete(name = "Exercise Habit - Before", labels = c("None", "1-2 times a week", "3-4 times a week", "5+ times a week")) + 
+  facet_wrap(~HType, ncol = 2, nrow = 3) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank()) + 
+  expand_limits(y = 1) + 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1L))
+
+# Exercise habit after
+ggplot(covid_change, aes(x= Exe_After,  group=HType)) + 
+  geom_bar(aes(y = ..prop.., fill = factor(..x..))) +
+  geom_text(aes(label = scales::percent(..prop..),
+                y= ..prop.. ), stat= "count", vjust = -.5, angle = 0) +
+  labs(y = "Relative Frequency", x ="Exercise habit after lockdown") +
+  scale_fill_discrete(name = "Exercise Habit - After", labels = c("None", "1-2 times a week", "3-4 times a week", "5+ times a week")) + 
+  facet_wrap(~HType, ncol = 2, nrow = 3) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank()) + 
+  expand_limits(y = 1) + 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1L))
+```
+
+```{r}
+#Number of respondents went out for non-essential purpose or not broken by Gender, Edu, Htype 
+
+Sex <- covid_change %>%
+  select(PersonID, Sex, Outside_Ac_or_not) %>%
+  mutate(Outside_Ac_or_not = ifelse(Outside_Ac_or_not == 1, 'Yes', 'No'),
+         Outside_Ac_or_not = as.factor(Outside_Ac_or_not)) %>%
+  group_by(Sex, Outside_Ac_or_not) %>%
+  summarise(number_of_respondents = length(PersonID))
+
+Sex_outside <- Sex %>%
+  ggplot(aes(fill=Outside_Ac_or_not, y=number_of_respondents, x=Sex)) + 
+    geom_bar(position="fill", stat="identity", width = 0.8, alpha = 0.8) + 
+  labs(x = 'Gender', y= 'Percentage of Respondents', title = 'Men vs Non-Essential Excursions') +
+  scale_y_continuous(labels = scales::label_percent()) +
+  scale_fill_brewer(palette = "Set1", name = 'Went out for reasons besides grocery shopping/exercise') +
+  theme_classic() +
+  theme(axis.ticks = element_blank(),
+        plot.title = element_text(size=14),
+        legend.position = "bottom",
+        panel.border = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_line(color="grey95"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        axis.title = element_text(face="bold"),
+        plot.caption = element_text(face="italic"))
+Sex_outside
+
+
+Educ <- covid_change %>%
+  select(PersonID, Educ, Outside_Ac_or_not) %>%
+  mutate(Outside_Ac_or_not = ifelse(Outside_Ac_or_not == 1, 'Yes', 'No'),
+         Outside_Ac_or_not = as.factor(Outside_Ac_or_not)) %>%
+  group_by(Educ, Outside_Ac_or_not) %>%
+  summarise(number_of_respondents = length(PersonID))
+
+Educ_outside <- Educ %>%
+  ggplot(aes(fill=Outside_Ac_or_not, y=number_of_respondents, x=Educ)) + 
+    geom_bar(position="fill", stat="identity", width = 0.8, alpha = 0.8) + 
+  labs(x = 'Education Level', y= 'Percentage of Respondents', title = 'College \\ Associate\'s Degree vs Non-Essential Excursions') +
+  scale_y_continuous(labels = scales::label_percent()) +
+  scale_fill_brewer(palette = "Set1", name = 'Went out for reasons besides grocery shopping/exercise') +
+  theme_classic() +
+  theme(axis.ticks = element_blank(),
+        plot.title = element_text(size=14),
+        legend.position = "bottom",
+        panel.border = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_line(color="grey95"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        axis.title = element_text(face="bold"),
+        plot.caption = element_text(face="italic"))
+Educ_outside
+
+
+Htype <- covid_change %>%
+  select(PersonID, HType, Outside_Ac_or_not) %>%
+  mutate(Outside_Ac_or_not = ifelse(Outside_Ac_or_not == 1, 'Yes', 'No'),
+         Outside_Ac_or_not = as.factor(Outside_Ac_or_not)) %>%
+  group_by(HType, Outside_Ac_or_not) %>%
+  summarise(number_of_respondents = length(PersonID))
+
+Htype_outside <- Htype %>%
+  ggplot(aes(fill=Outside_Ac_or_not, y=number_of_respondents, x=HType)) + 
+  geom_bar(position="fill", stat="identity", width = 0.8, alpha = 0.8) + 
+  labs(x = 'Household Type', y= 'Percentage of Respondents', title = 'People in Multi-Family Homes vs Non-Essential Excursions') +
+  scale_y_continuous(labels = scales::label_percent()) +
+  scale_fill_brewer(palette = "Set1", name = 'Went out for reasons besides grocery shopping/exercise') +
+  theme_classic() +
+  theme(axis.ticks = element_blank(),
+        plot.title = element_text(size=14),
+        legend.position = "bottom",
+        panel.border = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_line(color="grey95"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        axis.title = element_text(face="bold"),
+        plot.caption = element_text(face="italic"))
+Htype_outside
+
+
+```
