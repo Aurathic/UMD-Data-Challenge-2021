@@ -1,19 +1,28 @@
+---
+title: "DC21"
+author: "Adam Levav"
+date: "2/27/2021"
+output: html_document
+---
+
+```{r}
 library(foreign)
 library(readxl)
 library(tidyverse)
 
 # Smart Location Database
+# https://edg.epa.gov/EPADataCommons/public/OP/SLD/
 sld <- read.dbf("SmartLocationDb.dbf")
-
 # Survey data
 sur <- read.csv("Data_Lv2_NCSG_BehaviorChangesCOVID19.csv")
-
 # Data used to convert CFIPS to ZIP code
+# https://www.huduser.gov/portal/datasets/usps_crosswalk.html#data
 area_codes <- read_excel("ZIP_TRACT_122020.xlsx")
-
 # Make sure all zipcodes are 5 characters long
 sur$Zipcode = str_pad(sur$Zipcode, pad="0", side="left", width=5)
+```
 
+```{r}
 # For every zipcode in survey dataset
 zip_code_data <- map(sur$Zipcode, function(zc) {
   # Get all data in SLD associated with tracts in given zipcode 
@@ -35,5 +44,6 @@ zip_code_data <- map(sur$Zipcode, function(zc) {
 # convert list of vectors into a dataframe
 zip_code_df <- bind_rows(lapply(zip_code_data, as.data.frame.list))
 # sur <- cbind(sur,zip_code_df)
-  
+```
+
 write.csv(zip_code_df,"new_vars4.csv")

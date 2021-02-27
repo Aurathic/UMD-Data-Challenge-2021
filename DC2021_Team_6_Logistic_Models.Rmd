@@ -1,8 +1,19 @@
 ---
-title: "DC21"
-author: "Junrong Liu"
-date: "2/23/2021"
-output: html_document
+title: |
+  | UMD Data Challenge 2021
+  | Team 6
+  | UMD National Center for Smart Growth: Covid-19 Behavioral Changes
+author: 
+  - Adam Levav
+  - Junrong Liu
+  - Ting-Yu Liu
+  - Walesia Robinson II
+output:
+  html_document:
+    number_sections: no
+    toc: yes
+  pdf_document:
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -397,9 +408,9 @@ Sex <- covid_change %>%
 Sex_outside <- Sex %>%
   ggplot(aes(fill=Outside_Ac_or_not, y=number_of_respondents, x=Sex)) + 
     geom_bar(position="fill", stat="identity", width = 0.8, alpha = 0.8) + 
-  labs(x = 'Gender', y= 'Percentage of Respondents', title = 'Men vs Non-Essential Excursions') +
+  labs(x = 'Gender', y= 'Percentage of Respondents', title = 'Gender vs. Non-essential Excursions') +
   scale_y_continuous(labels = scales::label_percent()) +
-  scale_fill_brewer(palette = "Set1", name = 'Went out for reasons besides grocery shopping/exercise') +
+  scale_fill_brewer(palette = "Set1", name = 'Went Out for Non-essential Purposes') +
   theme_classic() +
   theme(axis.ticks = element_blank(),
         plot.title = element_text(size=14),
@@ -424,9 +435,9 @@ Educ <- covid_change %>%
 Educ_outside <- Educ %>%
   ggplot(aes(fill=Outside_Ac_or_not, y=number_of_respondents, x=Educ)) + 
     geom_bar(position="fill", stat="identity", width = 0.8, alpha = 0.8) + 
-  labs(x = 'Education Level', y= 'Percentage of Respondents', title = 'College \\ Associate\'s Degree vs Non-Essential Excursions') +
+  labs(x = 'Education Level', y= 'Percentage of Respondents', title = 'Education Level vs. Non-essential Excursions') +
   scale_y_continuous(labels = scales::label_percent()) +
-  scale_fill_brewer(palette = "Set1", name = 'Went out for reasons besides grocery shopping/exercise') +
+  scale_fill_brewer(palette = "Set1", name = 'Went Out for Non-essential Purposes') +
   theme_classic() +
   theme(axis.ticks = element_blank(),
         plot.title = element_text(size=14),
@@ -451,9 +462,9 @@ Htype <- covid_change %>%
 Htype_outside <- Htype %>%
   ggplot(aes(fill=Outside_Ac_or_not, y=number_of_respondents, x=HType)) + 
   geom_bar(position="fill", stat="identity", width = 0.8, alpha = 0.8) + 
-  labs(x = 'Household Type', y= 'Percentage of Respondents', title = 'People in Multi-Family Homes vs Non-Essential Excursions') +
+  labs(x = 'Household Type', y= 'Percentage of Respondents', title = 'Household Types vs. Non-essential Excursions') +
   scale_y_continuous(labels = scales::label_percent()) +
-  scale_fill_brewer(palette = "Set1", name = 'Went out for reasons besides grocery shopping/exercise') +
+  scale_fill_brewer(palette = "Set1", name = 'Went Out for Non-essential Purposes') +
   theme_classic() +
   theme(axis.ticks = element_blank(),
         plot.title = element_text(size=14),
